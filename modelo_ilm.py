@@ -24,3 +24,71 @@ print(df.columns)
 df.info()
 
 !pip install sentence-transformers faiss-cpu transformers
+
+datos = {
+    "texto": [
+        "Python es un lenguaje de programación.",
+        "Pandas sirve para análisis de datos.",
+        "Google Colab permite ejecutar notebooks.",
+        "Transformers se usa para NLP."
+    ]
+}
+
+df = pd.DataFrame(datos)
+
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import faiss
+
+modelo_embedding = SentenceTransformer(
+    'all-MiniLM-L6-v2'
+)
+
+embeddings = modelo_embedding.encode(
+    df["texto"].tolist()
+)
+
+dimension = embeddings.shape[1]
+
+index = faiss.IndexFlatL2(dimension)
+index.add(np.array(embeddings))
+
+index.add(np.array(embeddings))
+
+from transformers import pipeline
+
+generador = pipeline(
+    "text-generation",
+    model="distilgpt2"
+)
+
+consulta = "¿Para qué sirve Pandas?"
+
+embedding_consulta = modelo_embedding.encode([consulta])
+
+distancias, indices = index.search(
+    np.array(embedding_consulta),
+    2
+)
+
+contexto = "\n".join(
+    [df.iloc[i]["texto"] for i in indices[0]]
+)
+
+prompt = f"""
+Contexto:
+{contexto}
+
+Pregunta:
+{consulta}
+
+Respuesta:
+"""
+
+respuesta = generador(
+    prompt,
+    max_new_tokens=50,
+    do_sample=False
+)
+
+print(respuesta[0]["generated_text"])
